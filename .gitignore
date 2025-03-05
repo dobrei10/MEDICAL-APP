@@ -1,18 +1,137 @@
-# This .gitignore is appropriate for repositories deployed to GitHub Pages and using
-# a Gemfile as specified at https://github.com/github/pages-gem#conventional
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <title>Interfață Medicală - Autentificare</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #eaf4ff; margin: 0; padding: 0; box-sizing: border-box; }
+        .container { width: 100%; max-width: 400px; margin: 100px auto; text-align: center; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { color: #4682B4; }
+        input, button, select { margin: 10px 0; padding: 10px; width: 90%; border: 1px solid #ccc; border-radius: 8px; }
+        button { background: #4682B4; color: white; cursor: pointer; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="login" class="container">
+        <h2>Bine ați venit la vizita medicală!</h2>
+        <h3>Autentificare</h3>
+        <input id="username" type="text" placeholder="Utilizator">
+        <input id="password" type="password" placeholder="Parolă">
+        <button onclick="login()">Autentificare</button>
+    </div>
 
-# Basic Jekyll gitignores (synchronize to Jekyll.gitignore)
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
+    <div id="dashboard" class="container hidden">
+        <h2>Interfață Medicală</h2>
+        <button onclick="logout()">Deconectare</button>
 
-# Additional Ruby/bundler ignore for when you run: bundle install
-/vendor
+        <h3>Adaugă Pacient</h3>
+        <input id="nume" type="text" placeholder="Nume">
+        <input id="varsta" type="number" placeholder="Vârstă" min="0" max="100">
+        <button onclick="adaugaPacient()">Adaugă Pacient</button>
 
-# Specific ignore for GitHub Pages
-# GitHub Pages will always use its own deployed version of pages-gem 
-# This means GitHub Pages will NOT use your Gemfile.lock and therefore it is
-# counterproductive to check this file into the repository.
-# Details at https://github.com/github/pages-gem/issues/768
-Gemfile.lock
+        <button onclick="toggleListaPacienti()">Lista Pacienților</button>
+        <div id="listaPacienti" class="hidden"></div>
+
+        <h3>Boli</h3>
+        <select id="boala">
+            <option value="Anemie">Anemie</option>
+            <option value="Boala Parkinson">Boala Parkinson</option>
+            <option value="Cancer de col uterin">Cancer de col uterin</option>
+            <option value="Diabet zaharat">Diabet zaharat</option>
+            <option value="Ebola">Ebola</option>
+            <option value="Faringită">Faringită</option>
+            <option value="Gastrită">Gastrită</option>
+            <option value="Hepatită">Hepatită</option>
+            <option value="Infarct miocardic">Infarct miocardic</option>
+            <option value="Leucemie">Leucemie</option>
+        </select>
+        <button onclick="asociazaBoala()">Adaugă Boală</button>
+    </div>
+
+    <script>
+        const utilizatori = { 'doctor': '1234', 'asistent': '5678' };
+        let pacienti = JSON.parse(localStorage.getItem('pacienti')) || [];
+        let boliDisponibile = ["Anemie", "Boala Parkinson", "Cancer de col uterin", "Diabet zaharat", "Ebola", "Faringită", "Gastrită", "Hepatită", "Infarct miocardic", "Leucemie"];
+
+        function login() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+
+            if (utilizatori[user] === pass) {
+                document.getElementById('login').classList.add('hidden');
+                document.getElementById('dashboard').classList.remove('hidden');
+                afiseazaPacienti();
+            } else {
+                alert('Utilizator sau parolă greșită!');
+            }
+        }
+
+        function logout() {
+            document.getElementById('login').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        function adaugaPacient() {
+            const nume = document.getElementById('nume').value;
+            const varsta = parseInt(document.getElementById('varsta').value);
+
+            if (!nume || isNaN(varsta) || varsta < 0 || varsta > 100) {
+                alert('Introduceți un nume valid și o vârstă între 0 și 100.');
+                return;
+            }
+
+            pacienti.push({ nume, varsta, boala: null });
+            localStorage.setItem('pacienti', JSON.stringify(pacienti));
+            alert('Pacient adăugat cu succes!');
+            afiseazaPacienti();
+        }
+
+        function afiseazaPacienti() {
+            const lista = document.getElementById('listaPacienti');
+            lista.innerHTML = pacienti.map((p, index) => `
+                ${p.nume}, ${p.varsta} ani ${p.boala ? '- ' + p.boala : ''}
+                <button onclick="stergePacient(${index})">Șterge</button>
+            `).join('<br>');
+            lista.classList.remove('hidden');
+        }
+
+        function toggleListaPacienti() {
+            const lista = document.getElementById('listaPacienti');
+            lista.classList.toggle('hidden');
+        }
+
+        function stergePacient(index) {
+            pacienti.splice(index, 1);
+            localStorage.setItem('pacienti', JSON.stringify(pacienti));
+            alert('Pacient șters cu succes!');
+            afiseazaPacienti();
+        }
+
+        function asociazaBoala() {
+            if (pacienti.length === 0 || boliDisponibile.length === 0) {
+                alert('Nu există pacienți sau boli disponibile.');
+                return;
+            }
+
+            const boalaSelectata = document.getElementById('boala').value;
+            if (!boliDisponibile.includes(boalaSelectata)) {
+                alert('Această boală a fost deja asociată.');
+                return;
+            }
+
+            const pacientIndex = Math.floor(Math.random() * pacienti.length);
+
+            if (!pacienti[pacientIndex].boala) {
+                pacienti[pacientIndex].boala = boalaSelectata;
+                boliDisponibile = boliDisponibile.filter(b => b !== boalaSelectata);
+                localStorage.setItem('pacienti', JSON.stringify(pacienti));
+                alert(`Boala ${boalaSelectata} a fost asociată pacientului ${pacienti[pacientIndex].nume}`);
+                afiseazaPacienti();
+            } else {
+                alert('Toți pacienții au deja o boală.');
+            }
+        }
+    </script>
+</body>
+</html>
